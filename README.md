@@ -9,6 +9,7 @@ Next.js frontend for the Dayne debt tracker.
 - Archived read-only page at `/loan/archive/[archivedToken]`.
 - Payment recording with optional proof upload (R2 presigned URL flow).
 - Approve/reject workflow and live balance/progress updates.
+- Lender waiver dropdown to reduce part or all of remaining balance.
 - Immutable audit timeline on all views.
 
 ## Run locally

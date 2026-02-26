@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Link, ArrowRight, History } from "lucide-react";
 
 const MANAGE_TOKEN_STORAGE_KEY = "dayne:last_manage_token";
 
@@ -16,9 +18,10 @@ function extractManageToken(value: string): string {
   }
 
   try {
-    const asURL = trimmed.startsWith("http://") || trimmed.startsWith("https://")
-      ? new URL(trimmed)
-      : new URL(`http://placeholder${trimmed.startsWith("/") ? "" : "/"}${trimmed}`);
+    const asURL =
+      trimmed.startsWith("http://") || trimmed.startsWith("https://")
+        ? new URL(trimmed)
+        : new URL(`http://placeholder${trimmed.startsWith("/") ? "" : "/"}${trimmed}`);
     const parts = asURL.pathname.split("/").filter(Boolean);
     const manageIndex = parts.indexOf("manage");
     if (manageIndex >= 0 && parts[manageIndex + 1]) {
@@ -35,7 +38,6 @@ export function OpenRepaymentForm() {
   const router = useRouter();
   const [input, setInput] = useState("");
   const [storedToken, setStoredToken] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = window.localStorage.getItem(MANAGE_TOKEN_STORAGE_KEY) ?? "";
@@ -47,10 +49,9 @@ export function OpenRepaymentForm() {
   function openByToken(token: string) {
     const clean = token.trim();
     if (!clean) {
-      setError("Enter a valid manage token or manage URL.");
+      toast.error("Enter a valid manage token or manage URL.");
       return;
     }
-    setError(null);
     router.push(`/manage/${clean}`);
   }
 
@@ -58,7 +59,7 @@ export function OpenRepaymentForm() {
     event.preventDefault();
     const token = extractManageToken(input);
     if (!token) {
-      setError("Could not detect a manage token. Paste the full manage link or just the token.");
+      toast.error("Could not detect a manage token. Paste the full manage link or just the token.");
       return;
     }
     openByToken(token);
@@ -66,27 +67,44 @@ export function OpenRepaymentForm() {
 
   return (
     <section className="panel">
-      <h2>Open Repayment Page</h2>
-      <p>To record a new payment and upload receipt, open your private manage link.</p>
+      <h2>
+        <ArrowRight size={18} />
+        Open Repayment Page
+      </h2>
+      <p style={{ margin: "0 0 20px", fontSize: "0.9rem", color: "var(--ink-muted)" }}>
+        Paste your private manage link to record a new payment and upload your receipt.
+      </p>
       <form className="form-grid" onSubmit={onSubmit}>
         <label className="full-width">
-          Paste your manage URL or token
+          <span className="label-row">
+            <Link size={12} />
+            Manage URL or Token
+          </span>
           <input
-            placeholder="https://dayne.com/manage/your-token"
+            placeholder="https://…/manage/your-token"
             value={input}
             onChange={(event) => setInput(event.target.value)}
           />
         </label>
-        <button type="submit">Open Repayment Dashboard</button>
+        <div className="full-width">
+          <button type="submit" style={{ width: "100%" }}>
+            <ArrowRight size={16} />
+            Open Dashboard
+          </button>
+        </div>
       </form>
 
       {hasStoredToken ? (
-        <button className="ghost" onClick={() => openByToken(storedToken)}>
-          Open Last Repayment Dashboard
+        <button
+          className="ghost"
+          onClick={() => openByToken(storedToken)}
+          style={{ marginTop: 12, width: "100%" }}
+          data-tooltip="Continue where you left off"
+        >
+          <History size={15} />
+          Resume Last Dashboard
         </button>
       ) : null}
-
-      {error ? <p className="error">{error}</p> : null}
     </section>
   );
 }

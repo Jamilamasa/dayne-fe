@@ -36,6 +36,7 @@ export interface LoanSummary {
   total_amount: number;
   total_paid_submitted: number;
   total_paid_approved: number;
+  total_waived: number;
   remaining_balance: number;
   pending_payment_count: number;
   progress_percent: number;
@@ -58,9 +59,18 @@ export interface AuditEventData {
   created_at: string;
 }
 
+export interface WaiverData {
+  id: string;
+  amount: number;
+  note?: string;
+  actor_type: "lender" | "system";
+  created_at: string;
+}
+
 export interface LoanDetails {
   loan: LoanData;
   payments: PaymentData[];
+  waivers: WaiverData[];
   summary: LoanSummary;
   links: LoanLinks;
   audit_events: AuditEventData[];

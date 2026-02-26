@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   createPayment,
   getManageLoan,
@@ -13,16 +14,44 @@ import { formatCurrency } from "@/lib/format";
 import { SummaryCards } from "@/components/ui/summary-cards";
 import { PaymentTable } from "@/components/ui/payment-table";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
+import {
+  Loader2,
+  LayoutDashboard,
+  Receipt,
+  History,
+  CheckCircle2,
+  ExternalLink,
+  DollarSign,
+  Calendar,
+  FileUp,
+  Send,
+  Copy
+} from "lucide-react";
 
 interface ManageLoanViewProps {
   manageToken: string;
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  async function handleCopy() {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <button className="copy-btn" onClick={handleCopy} type="button" data-tooltip={copied ? "Copied!" : "Copy link"}>
+      <Copy size={12} />
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
 }
 
 export function ManageLoanView({ manageToken }: ManageLoanViewProps) {
   const [loan, setLoan] = useState<LoanDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [amount, setAmount] = useState("");
   const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
@@ -31,12 +60,12 @@ export function ManageLoanView({ manageToken }: ManageLoanViewProps) {
 
   const loadLoan = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const response = await getManageLoan(manageToken);
       setLoan(response);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load loan details");
+      setLoadError(loadError instanceof Error ? loadError.message : "Failed to load loan details");
     } finally {
       setLoading(false);
     }
@@ -54,18 +83,15 @@ export function ManageLoanView({ manageToken }: ManageLoanViewProps) {
       const url = await getProofURLByManage(manageToken, paymentID);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (proofError) {
-      setError(proofError instanceof Error ? proofError.message : "Failed to open proof file");
+      toast.error(proofError instanceof Error ? proofError.message : "Failed to open proof file");
     }
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!loan) {
-      return;
-    }
+    if (!loan) return;
 
     setSubmitting(true);
-    setError(null);
 
     try {
       let proofObjectKey: string | undefined;
@@ -93,99 +119,172 @@ export function ManageLoanView({ manageToken }: ManageLoanViewProps) {
       setAmount("");
       setNote("");
       setFile(null);
+      toast.success("Payment recorded successfully!");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Failed to record payment");
+      toast.error(submitError instanceof Error ? submitError.message : "Failed to record payment");
     } finally {
       setSubmitting(false);
     }
   }
 
   if (loading) {
-    return <p className="loading">Loading loan details...</p>;
+    return (
+      <main className="page-shell">
+        <div className="loading">
+          <Loader2 size={22} className="spin" />
+          Loading loan details…
+        </div>
+      </main>
+    );
   }
 
-  if (error && !loan) {
-    return <p className="error">{error}</p>;
+  if (loadError && !loan) {
+    return (
+      <main className="page-shell">
+        <div className="error" style={{ marginTop: 0 }}>
+          {loadError}
+        </div>
+      </main>
+    );
   }
 
   if (!loan) {
-    return <p className="error">Loan not found.</p>;
+    return (
+      <main className="page-shell">
+        <div className="error" style={{ marginTop: 0 }}>Loan not found.</div>
+      </main>
+    );
   }
 
   return (
     <main className="page-shell">
       <section className="hero compact">
-        <p className="eyebrow">Borrower Dashboard</p>
+        <p className="eyebrow">
+          <LayoutDashboard size={11} />
+          Borrower Dashboard
+        </p>
         <h1>{loan.loan.borrower_name}&apos;s Debt Tracker</h1>
-        <p>
-          Remaining: <strong>{formatCurrency(loan.summary.remaining_balance, currency)}</strong>
-        </p>
-        <p>
-          Status: <strong>{loan.loan.status}</strong>
-        </p>
+        <div className="hero-meta">
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Remaining</span>
+            <span className="hero-meta-value">{formatCurrency(loan.summary.remaining_balance, currency)}</span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Status</span>
+            <span
+              className={`hero-meta-value status-chip ${loan.loan.status}`}
+              style={{ textTransform: "capitalize" }}
+            >
+              {loan.loan.status}
+            </span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Currency</span>
+            <span className="hero-meta-value">{currency}</span>
+          </div>
+        </div>
       </section>
 
       <SummaryCards summary={loan.summary} currency={currency} />
 
       <section className="panel">
-        <h2>Record New Payment</h2>
+        <h2>
+          <Receipt size={18} />
+          Record New Payment
+        </h2>
         {isCompleted ? (
-          <p className="success-note">
-            This loan is completed and now read-only.
-            {loan.links.archive_url ? (
-              <>
-                {" "}
-                View archived record:{" "}
-                <a href={loan.links.archive_url} target="_blank" rel="noreferrer">
-                  {loan.links.archive_url}
-                </a>
-              </>
-            ) : null}
-          </p>
+          <div className="success-note">
+            <CheckCircle2 size={16} style={{ marginTop: 1, flexShrink: 0 }} />
+            <span>
+              This loan is fully repaid and now read-only.
+              {loan.links.archive_url ? (
+                <>
+                  {" "}
+                  View the archived record:
+                  <div className="result-link-box" style={{ marginTop: 10, background: "var(--success-bg)" }}>
+                    <a href={loan.links.archive_url} target="_blank" rel="noreferrer">
+                      {loan.links.archive_url}
+                    </a>
+                    <CopyButton value={loan.links.archive_url} />
+                    <a href={loan.links.archive_url} target="_blank" rel="noreferrer" style={{ color: "var(--ink-muted)", display: "flex" }}>
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                </>
+              ) : null}
+            </span>
+          </div>
         ) : (
           <form className="form-grid" onSubmit={onSubmit}>
             <label>
-              Amount
+              <span className="label-row">
+                <DollarSign size={12} />
+                Amount
+              </span>
               <input
                 type="number"
                 step="0.01"
                 min="0"
+                placeholder="0.00"
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
                 required
               />
             </label>
+
             <label>
-              Payment Date
+              <span className="label-row">
+                <Calendar size={12} />
+                Payment Date
+              </span>
               <input type="date" value={paidAt} onChange={(event) => setPaidAt(event.target.value)} required />
             </label>
+
             <label className="full-width">
-              Notes
-              <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} />
+              Notes (optional)
+              <textarea
+                placeholder="Add any notes about this payment…"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={3}
+              />
             </label>
+
             <label className="full-width">
-              Proof of Payment (pdf/jpg/png/webp)
+              <span className="label-row">
+                <FileUp size={12} />
+                Proof of Payment (pdf / jpg / png / webp)
+              </span>
               <input
                 type="file"
                 accept="application/pdf,image/jpeg,image/png,image/webp"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               />
             </label>
-            <button type="submit" disabled={submitting}>
-              {submitting ? "Submitting..." : "Record Payment"}
-            </button>
+
+            <div className="full-width">
+              <button type="submit" disabled={submitting} style={{ width: "100%" }}>
+                {submitting ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
+                {submitting ? "Submitting Payment…" : "Record Payment"}
+              </button>
+            </div>
           </form>
         )}
-        {error ? <p className="error">{error}</p> : null}
       </section>
 
       <section className="panel">
-        <h2>Payment History</h2>
+        <h2>
+          <Receipt size={18} />
+          Payment History
+        </h2>
         <PaymentTable payments={loan.payments} currency={currency} onViewProof={handleViewProof} />
       </section>
 
       <section className="panel">
-        <h2>Immutable Audit Log</h2>
+        <h2>
+          <History size={18} />
+          Immutable Audit Log
+        </h2>
         <AuditTimeline events={loan.audit_events} />
       </section>
     </main>

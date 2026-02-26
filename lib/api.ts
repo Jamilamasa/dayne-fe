@@ -44,6 +44,11 @@ export interface CreatePaymentPayload {
   proof_filename?: string;
 }
 
+export interface CreateWaiverPayload {
+  amount: number;
+  note?: string;
+}
+
 export interface PresignProofPayload {
   filename: string;
   content_type: string;
@@ -89,6 +94,16 @@ export async function getPublicLoan(publicToken: string): Promise<LoanDetails> {
 
 export async function getArchivedLoan(archivedToken: string): Promise<LoanDetails> {
   return request<LoanDetails>(`/v1/loans/archive/${archivedToken}`);
+}
+
+export async function createLoanWaiver(
+  publicToken: string,
+  payload: CreateWaiverPayload
+): Promise<LoanDetails> {
+  return request<LoanDetails>(`/v1/loans/public/${publicToken}/waivers`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function approvePayment(publicToken: string, paymentID: string): Promise<LoanDetails> {

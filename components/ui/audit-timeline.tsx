@@ -1,5 +1,6 @@
 import { formatDate } from "@/lib/format";
 import { AuditEventData } from "@/types/api";
+import { Activity, FileText } from "lucide-react";
 
 interface AuditTimelineProps {
   events: AuditEventData[];
@@ -16,7 +17,12 @@ function toReadableAction(action: string): string {
 
 export function AuditTimeline({ events }: AuditTimelineProps) {
   if (events.length === 0) {
-    return <p className="empty-state">No audit events yet.</p>;
+    return (
+      <div className="empty-state">
+        <Activity size={28} />
+        <span>No audit events yet.</span>
+      </div>
+    );
   }
 
   return (
@@ -28,10 +34,13 @@ export function AuditTimeline({ events }: AuditTimelineProps) {
 
         return (
           <li key={event.id}>
-            <div>
+            <div className="audit-dot" aria-hidden="true">
+              <FileText size={13} />
+            </div>
+            <div className="audit-body">
               <p className="audit-title">{toReadableAction(event.action)}</p>
               <p className="audit-meta">
-                by {event.actor_display} ({event.actor_type}) on {formatDate(event.created_at)}
+                by {event.actor_display} ({event.actor_type}) &middot; {formatDate(event.created_at)}
               </p>
               {payload ? <p className="audit-payload">{payload}</p> : null}
             </div>
