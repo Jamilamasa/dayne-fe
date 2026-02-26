@@ -79,10 +79,18 @@ export function ManageLoanView({ manageToken }: ManageLoanViewProps) {
   const isCompleted = loan?.loan.status === "completed";
 
   async function handleViewProof(paymentID: string) {
+    // Open the window synchronously (within the user gesture) before any await.
+    // iOS Safari blocks window.open() called after an async/await boundary.
+    const proofWindow = window.open("", "_blank");
     try {
       const url = await getProofURLByManage(manageToken, paymentID);
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (proofWindow) {
+        proofWindow.location.href = url;
+      } else {
+        toast.error("Popup was blocked — please allow popups for this site to view proof.");
+      }
     } catch (proofError) {
+      proofWindow?.close();
       toast.error(proofError instanceof Error ? proofError.message : "Failed to open proof file");
     }
   }
